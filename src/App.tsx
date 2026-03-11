@@ -213,6 +213,11 @@ const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
 };
 
 const DashboardScreen = ({ user, refreshUser, setActiveTab }: { user: User, refreshUser: () => void, setActiveTab: (tab: string) => void }) => {
+  const totalInvested = user.activePlans.reduce((sum, plan) => sum + plan.amount, 0);
+  const totalProfit = user.transactions
+    .filter(tx => tx.type === 'profit')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
   return (
     <div className="space-y-6 pb-24 px-6 pt-2">
       {/* Balance Card */}
@@ -247,33 +252,80 @@ const DashboardScreen = ({ user, refreshUser, setActiveTab }: { user: User, refr
         </div>
       </motion.div>
 
-      {/* Stats Grid */}
+      {/* Investment Summary */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-          <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Active Plans</p>
-          <p className="text-xl font-bold text-gray-900">{user.activePlans.length}</p>
+          <div className="flex items-center space-x-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Invested</p>
+          </div>
+          <p className="text-xl font-bold text-gray-900">${totalInvested.toLocaleString()}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-          <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Total Referrals</p>
-          <p className="text-xl font-bold text-gray-900">{user.referrals}</p>
+          <div className="flex items-center space-x-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Profit</p>
+          </div>
+          <p className="text-xl font-bold text-emerald-600">+${totalProfit.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {/* Rewards & Referrals */}
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-3xl border border-amber-100">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h4 className="font-bold text-gray-900 text-sm">Available Rewards</h4>
+            <p className="text-[10px] text-amber-700 font-medium">Invite friends to earn more</p>
+          </div>
+          <div className="bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg">
+            {user.referrals} Referrals
+          </div>
+        </div>
+        <div className="flex items-center justify-between bg-white/60 backdrop-blur-sm p-3 rounded-2xl border border-white/40">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+              <Users size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-900">Referral Bonus</p>
+              <p className="text-[10px] text-gray-500">Earn 5% on every deposit</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setActiveTab('referral')}
+            className="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-xl transition-colors shadow-sm"
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
       </div>
 
       {/* Active Plans List */}
       {user.activePlans.length > 0 && (
         <div>
-          <h4 className="font-bold text-gray-900 mb-4">Active Investments</h4>
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="font-bold text-gray-900">Active Investments</h4>
+            <button onClick={() => setActiveTab('plans')} className="text-indigo-600 text-xs font-bold">New Plan</button>
+          </div>
           <div className="space-y-3">
             {user.activePlans.map((plan) => (
-              <div key={plan.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+              <div key={plan.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-indigo-100 transition-colors">
                 <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-sm text-gray-900">{plan.plan_name}</p>
-                    <p className="text-[10px] text-gray-400">Ends: {new Date(plan.end_date).toLocaleDateString()}</p>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                      <TrendingUp size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-gray-900">{plan.plan_name}</p>
+                      <p className="text-[10px] text-gray-400">Matures: {new Date(plan.end_date).toLocaleDateString()}</p>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-sm text-indigo-600">${plan.amount.toFixed(2)}</p>
-                    <p className="text-[10px] font-bold text-emerald-500">+{plan.profit_rate}%</p>
+                    <div className="flex items-center justify-end space-x-1">
+                      <ArrowUpRight size={10} className="text-emerald-500" />
+                      <p className="text-[10px] font-bold text-emerald-500">{plan.profit_rate}% Return</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -286,7 +338,7 @@ const DashboardScreen = ({ user, refreshUser, setActiveTab }: { user: User, refr
       <div>
         <div className="flex justify-between items-center mb-4">
           <h4 className="font-bold text-gray-900">Recent Activity</h4>
-          <button className="text-indigo-600 text-xs font-bold">View All</button>
+          <button onClick={() => setActiveTab('wallet')} className="text-indigo-600 text-xs font-bold">View History</button>
         </div>
         <div className="space-y-3">
           {user.transactions.length === 0 ? (
@@ -294,16 +346,18 @@ const DashboardScreen = ({ user, refreshUser, setActiveTab }: { user: User, refr
               <p className="text-gray-400 text-sm">No transactions yet</p>
             </div>
           ) : (
-            user.transactions.map((tx) => (
+            user.transactions.slice(0, 5).map((tx) => (
               <div key={tx.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
                 <div className="flex items-center space-x-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                     tx.type === 'deposit' ? 'bg-emerald-50 text-emerald-600' : 
                     tx.type === 'withdrawal' ? 'bg-red-50 text-red-600' : 
+                    tx.type === 'profit' ? 'bg-indigo-50 text-indigo-600' :
                     'bg-blue-50 text-blue-600'
                   }`}>
                     {tx.type === 'deposit' ? <ArrowDownLeft size={20} /> : 
                      tx.type === 'withdrawal' ? <ArrowUpRight size={20} /> : 
+                     tx.type === 'profit' ? <TrendingUp size={20} /> :
                      <TrendingUp size={20} />}
                   </div>
                   <div>
