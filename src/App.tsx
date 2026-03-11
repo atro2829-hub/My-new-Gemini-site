@@ -24,6 +24,24 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } f
 
 // --- Components ---
 
+const SubNav = ({ tabs, activeTab, setActiveTab }: { tabs: { id: string, label: string }[], activeTab: string, setActiveTab: (tab: string) => void }) => (
+  <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+    {tabs.map((tab) => (
+      <button
+        key={tab.id}
+        onClick={() => setActiveTab(tab.id)}
+        className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+          activeTab === tab.id 
+            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
+            : 'bg-white text-gray-400 border border-gray-100'
+        }`}
+      >
+        {tab.label}
+      </button>
+    ))}
+  </div>
+);
+
 const BottomNav = ({ activeTab, setActiveTab, isAdmin }: { activeTab: string, setActiveTab: (tab: string) => void, isAdmin: boolean }) => {
   const tabs = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Home' },
@@ -212,177 +230,196 @@ const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
   );
 };
 
-const DashboardScreen = ({ user, refreshUser, setActiveTab }: { user: User, refreshUser: () => void, setActiveTab: (tab: string) => void }) => {
+const DashboardScreen = ({ user, refreshUser, setActiveTab, subTab, setSubTab }: { user: User, refreshUser: () => void, setActiveTab: (tab: string) => void, subTab: string, setSubTab: (tab: string) => void }) => {
   const totalInvested = user.activePlans.reduce((sum, plan) => sum + plan.amount, 0);
   const totalProfit = user.transactions
     .filter(tx => tx.type === 'profit')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'investments', label: 'Investments' },
+    { id: 'activity', label: 'Activity' },
+  ];
+
   return (
     <div className="space-y-6 pb-24 px-6 pt-2">
-      {/* Balance Card */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-indigo-600 rounded-3xl p-6 text-white shadow-2xl shadow-indigo-200 relative overflow-hidden"
-      >
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <TrendingUp size={120} />
-        </div>
-        <div className="relative z-10">
-          <p className="text-indigo-100 text-xs font-semibold uppercase tracking-widest mb-1">Total Balance</p>
-          <h3 className="text-4xl font-bold tracking-tight">${user.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
-          
-          <div className="mt-8 flex space-x-3">
-            <button 
-              onClick={() => setActiveTab('wallet')}
-              className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-md py-3 rounded-xl flex items-center justify-center space-x-2 transition-all"
-            >
-              <Plus size={18} />
-              <span className="font-bold text-sm">Deposit</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('wallet')}
-              className="flex-1 bg-white text-indigo-600 py-3 rounded-xl flex items-center justify-center space-x-2 transition-all shadow-lg"
-            >
-              <ArrowUpRight size={18} />
-              <span className="font-bold text-sm">Withdraw</span>
-            </button>
-          </div>
-        </div>
-      </motion.div>
+      <SubNav tabs={tabs} activeTab={subTab} setActiveTab={setSubTab} />
 
-      {/* Investment Summary */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex items-center space-x-2 mb-1">
-            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Invested</p>
-          </div>
-          <p className="text-xl font-bold text-gray-900">${totalInvested.toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex items-center space-x-2 mb-1">
-            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Profit</p>
-          </div>
-          <p className="text-xl font-bold text-emerald-600">+${totalProfit.toLocaleString()}</p>
-        </div>
-      </div>
-
-      {/* Rewards & Referrals */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-3xl border border-amber-100">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h4 className="font-bold text-gray-900 text-sm">Available Rewards</h4>
-            <p className="text-[10px] text-amber-700 font-medium">Invite friends to earn more</p>
-          </div>
-          <div className="bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg">
-            {user.referrals} Referrals
-          </div>
-        </div>
-        <div className="flex items-center justify-between bg-white/60 backdrop-blur-sm p-3 rounded-2xl border border-white/40">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
-              <Users size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-gray-900">Referral Bonus</p>
-              <p className="text-[10px] text-gray-500">Earn 5% on every deposit</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setActiveTab('referral')}
-            className="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-xl transition-colors shadow-sm"
+      {subTab === 'overview' && (
+        <>
+          {/* Balance Card */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-indigo-600 rounded-3xl p-6 text-white shadow-2xl shadow-indigo-200 relative overflow-hidden"
           >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <TrendingUp size={120} />
+            </div>
+            <div className="relative z-10">
+              <p className="text-indigo-100 text-xs font-semibold uppercase tracking-widest mb-1">Total Balance</p>
+              <h3 className="text-4xl font-bold tracking-tight">${user.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+              
+              <div className="mt-8 flex space-x-3">
+                <button 
+                  onClick={() => setActiveTab('wallet')}
+                  className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-md py-3 rounded-xl flex items-center justify-center space-x-2 transition-all"
+                >
+                  <Plus size={18} />
+                  <span className="font-bold text-sm">Deposit</span>
+                </button>
+                <button 
+                  onClick={() => setActiveTab('wallet')}
+                  className="flex-1 bg-white text-indigo-600 py-3 rounded-xl flex items-center justify-center space-x-2 transition-all shadow-lg"
+                >
+                  <ArrowUpRight size={18} />
+                  <span className="font-bold text-sm">Withdraw</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
 
-      {/* Active Plans List */}
-      {user.activePlans.length > 0 && (
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="font-bold text-gray-900">Active Investments</h4>
-            <button onClick={() => setActiveTab('plans')} className="text-indigo-600 text-xs font-bold">New Plan</button>
+          {/* Investment Summary */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex items-center space-x-2 mb-1">
+                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Invested</p>
+              </div>
+              <p className="text-xl font-bold text-gray-900">${totalInvested.toLocaleString()}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex items-center space-x-2 mb-1">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Profit</p>
+              </div>
+              <p className="text-xl font-bold text-emerald-600">+${totalProfit.toLocaleString()}</p>
+            </div>
           </div>
-          <div className="space-y-3">
-            {user.activePlans.map((plan) => (
-              <div key={plan.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-indigo-100 transition-colors">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
-                      <TrendingUp size={20} />
+
+          {/* Rewards & Referrals */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-3xl border border-amber-100">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm">Available Rewards</h4>
+                <p className="text-[10px] text-amber-700 font-medium">Invite friends to earn more</p>
+              </div>
+              <div className="bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg">
+                {user.referrals} Referrals
+              </div>
+            </div>
+            <div className="flex items-center justify-between bg-white/60 backdrop-blur-sm p-3 rounded-2xl border border-white/40">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+                  <Users size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-900">Referral Bonus</p>
+                  <p className="text-[10px] text-gray-500">Earn 5% on every deposit</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setActiveTab('referral')}
+                className="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-xl transition-colors shadow-sm"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {subTab === 'investments' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h4 className="font-bold text-gray-900">Active Investments</h4>
+            <button onClick={() => setActiveTab('plans')} className="text-indigo-600 text-xs font-bold flex items-center space-x-1">
+              <Plus size={14} />
+              <span>New Plan</span>
+            </button>
+          </div>
+          {user.activePlans.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200">
+              <p className="text-gray-400 text-sm">No active investments</p>
+              <button onClick={() => setActiveTab('plans')} className="mt-4 text-indigo-600 font-bold text-sm underline">Browse Plans</button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {user.activePlans.map((plan) => (
+                <div key={plan.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-indigo-100 transition-colors">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                        <TrendingUp size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm text-gray-900">{plan.plan_name}</p>
+                        <p className="text-[10px] text-gray-400">Matures: {new Date(plan.end_date).toLocaleDateString()}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-sm text-gray-900">{plan.plan_name}</p>
-                      <p className="text-[10px] text-gray-400">Matures: {new Date(plan.end_date).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-sm text-indigo-600">${plan.amount.toFixed(2)}</p>
-                    <div className="flex items-center justify-end space-x-1">
-                      <ArrowUpRight size={10} className="text-emerald-500" />
-                      <p className="text-[10px] font-bold text-emerald-500">{plan.profit_rate}% Return</p>
+                    <div className="text-right">
+                      <p className="font-bold text-sm text-indigo-600">${plan.amount.toFixed(2)}</p>
+                      <div className="flex items-center justify-end space-x-1">
+                        <ArrowUpRight size={10} className="text-emerald-500" />
+                        <p className="text-[10px] font-bold text-emerald-500">{plan.profit_rate}% Return</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Recent Transactions */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
+      {subTab === 'activity' && (
+        <div className="space-y-4">
           <h4 className="font-bold text-gray-900">Recent Activity</h4>
-          <button onClick={() => setActiveTab('wallet')} className="text-indigo-600 text-xs font-bold">View History</button>
-        </div>
-        <div className="space-y-3">
-          {user.transactions.length === 0 ? (
-            <div className="text-center py-8 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-              <p className="text-gray-400 text-sm">No transactions yet</p>
-            </div>
-          ) : (
-            user.transactions.slice(0, 5).map((tx) => (
-              <div key={tx.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    tx.type === 'deposit' ? 'bg-emerald-50 text-emerald-600' : 
-                    tx.type === 'withdrawal' ? 'bg-red-50 text-red-600' : 
-                    tx.type === 'profit' ? 'bg-indigo-50 text-indigo-600' :
-                    'bg-blue-50 text-blue-600'
-                  }`}>
-                    {tx.type === 'deposit' ? <ArrowDownLeft size={20} /> : 
-                     tx.type === 'withdrawal' ? <ArrowUpRight size={20} /> : 
-                     tx.type === 'profit' ? <TrendingUp size={20} /> :
-                     <TrendingUp size={20} />}
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm text-gray-900 capitalize">{tx.type}</p>
-                    <p className="text-[10px] text-gray-400">{new Date(tx.timestamp).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold text-sm ${
-                    tx.type === 'deposit' || tx.type === 'profit' ? 'text-emerald-600' : 'text-gray-900'
-                  }`}>
-                    {tx.type === 'deposit' || tx.type === 'profit' ? '+' : '-'}${tx.amount.toFixed(2)}
-                  </p>
-                  <p className={`text-[10px] font-bold uppercase tracking-tighter ${
-                    tx.status === 'completed' ? 'text-emerald-500' : 
-                    tx.status === 'pending' ? 'text-amber-500' : 'text-red-500'
-                  }`}>
-                    {tx.status}
-                  </p>
-                </div>
+          <div className="space-y-3">
+            {user.transactions.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200">
+                <p className="text-gray-400 text-sm">No transactions yet</p>
               </div>
-            ))
-          )}
+            ) : (
+              user.transactions.map((tx) => (
+                <div key={tx.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      tx.type === 'deposit' ? 'bg-emerald-50 text-emerald-600' : 
+                      tx.type === 'withdrawal' ? 'bg-red-50 text-red-600' : 
+                      tx.type === 'profit' ? 'bg-indigo-50 text-indigo-600' :
+                      'bg-blue-50 text-blue-600'
+                    }`}>
+                      {tx.type === 'deposit' ? <ArrowDownLeft size={20} /> : 
+                       tx.type === 'withdrawal' ? <ArrowUpRight size={20} /> : 
+                       tx.type === 'profit' ? <TrendingUp size={20} /> :
+                       <TrendingUp size={20} />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-gray-900 capitalize">{tx.type}</p>
+                      <p className="text-[10px] text-gray-400">{new Date(tx.timestamp).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-bold text-sm ${
+                      tx.type === 'deposit' || tx.type === 'profit' ? 'text-emerald-600' : 'text-gray-900'
+                    }`}>
+                      {tx.type === 'deposit' || tx.type === 'profit' ? '+' : '-'}${tx.amount.toFixed(2)}
+                    </p>
+                    <p className={`text-[10px] font-bold uppercase tracking-tighter ${
+                      tx.status === 'completed' ? 'text-emerald-500' : 
+                      tx.status === 'pending' ? 'text-amber-500' : 'text-red-500'
+                    }`}>
+                      {tx.status}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -554,11 +591,16 @@ const PlansScreen = ({ user, refreshUser, plans }: { user: User, refreshUser: ()
   );
 };
 
-const WalletScreen = ({ user, refreshUser, settings }: { user: User, refreshUser: () => void, settings: any }) => {
-  const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
+const WalletScreen = ({ user, refreshUser, settings, subTab, setSubTab }: { user: User, refreshUser: () => void, settings: any, subTab: string, setSubTab: (tab: string) => void }) => {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const tabs = [
+    { id: 'deposit', label: 'Deposit' },
+    { id: 'withdraw', label: 'Withdraw' },
+    { id: 'history', label: 'History' },
+  ];
 
   const handleAction = async () => {
     const val = parseFloat(amount);
@@ -566,13 +608,13 @@ const WalletScreen = ({ user, refreshUser, settings }: { user: User, refreshUser
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/${mode}`, {
+      const res = await fetch(`/api/${subTab}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, amount: val }),
       });
       if (res.ok) {
-        alert(`${mode.charAt(0).toUpperCase() + mode.slice(1)} successful!`);
+        alert(`${subTab.charAt(0).toUpperCase() + subTab.slice(1)} successful!`);
         setAmount('');
         refreshUser();
       } else {
@@ -599,82 +641,117 @@ const WalletScreen = ({ user, refreshUser, settings }: { user: User, refreshUser
         <p className="text-sm text-gray-500">Manage your funds securely.</p>
       </div>
 
-      <div className="bg-white rounded-3xl border border-gray-100 p-2 flex shadow-sm">
-        <button 
-          onClick={() => setMode('deposit')}
-          className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-all ${mode === 'deposit' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-gray-400'}`}
-        >
-          Deposit
-        </button>
-        <button 
-          onClick={() => setMode('withdraw')}
-          className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-all ${mode === 'withdraw' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-gray-400'}`}
-        >
-          Withdraw
-        </button>
-      </div>
+      <SubNav tabs={tabs} activeTab={subTab} setActiveTab={setSubTab} />
 
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm space-y-6">
-        <div>
-          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Amount to {mode}</label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full pl-8 pr-4 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 text-xl font-bold outline-none"
-              placeholder="0.00"
-            />
-          </div>
+      {subTab === 'history' ? (
+        <div className="space-y-3">
+          {user.transactions.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200">
+              <p className="text-gray-400 text-sm">No transaction history</p>
+            </div>
+          ) : (
+            user.transactions.map((tx) => (
+              <div key={tx.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    tx.type === 'deposit' ? 'bg-emerald-50 text-emerald-600' : 
+                    tx.type === 'withdrawal' ? 'bg-red-50 text-red-600' : 
+                    'bg-blue-50 text-blue-600'
+                  }`}>
+                    {tx.type === 'deposit' ? <ArrowDownLeft size={20} /> : 
+                     tx.type === 'withdrawal' ? <ArrowUpRight size={20} /> : 
+                     <TrendingUp size={20} />}
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-gray-900 capitalize">{tx.type}</p>
+                    <p className="text-[10px] text-gray-400">{new Date(tx.timestamp).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className={`font-bold text-sm ${
+                    tx.type === 'deposit' || tx.type === 'profit' ? 'text-emerald-600' : 'text-gray-900'
+                  }`}>
+                    {tx.type === 'deposit' || tx.type === 'profit' ? '+' : '-'}${tx.amount.toFixed(2)}
+                  </p>
+                  <p className={`text-[10px] font-bold uppercase tracking-tighter ${
+                    tx.status === 'completed' ? 'text-emerald-500' : 
+                    tx.status === 'pending' ? 'text-amber-500' : 'text-red-500'
+                  }`}>
+                    {tx.status}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm space-y-6">
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Amount to {subTab}</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full pl-8 pr-4 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 text-xl font-bold outline-none"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
 
-        {mode === 'deposit' ? (
-          <div className="space-y-4">
-            <div className="bg-indigo-50 p-4 rounded-2xl">
-              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2">USDT Address (TRC20)</p>
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-mono font-bold text-indigo-900 break-all mr-2">{settings.usdt_address}</p>
-                <button onClick={copyAddress} className="text-indigo-600 p-2 bg-white rounded-lg shadow-sm">
-                  {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
-                </button>
+          {subTab === 'deposit' ? (
+            <div className="space-y-4">
+              <div className="bg-indigo-50 p-4 rounded-2xl">
+                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2">USDT Address (TRC20)</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-mono font-bold text-indigo-900 break-all mr-2">{settings.usdt_address}</p>
+                  <button onClick={copyAddress} className="text-indigo-600 p-2 bg-white rounded-lg shadow-sm">
+                    {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                  </button>
+                </div>
+              </div>
+              <div className="bg-indigo-50 p-4 rounded-2xl">
+                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Binance ID</p>
+                <p className="text-sm font-mono font-bold text-indigo-900">{settings.binance_id}</p>
+              </div>
+              <div className="bg-amber-50 p-4 rounded-2xl flex items-start space-x-3">
+                <AlertCircle size={20} className="text-amber-600 shrink-0" />
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  After sending funds, enter the amount above and click confirm. Our team will verify and credit your account.
+                </p>
               </div>
             </div>
-            <div className="bg-indigo-50 p-4 rounded-2xl">
-              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Binance ID</p>
-              <p className="text-sm font-mono font-bold text-indigo-900">{settings.binance_id}</p>
-            </div>
+          ) : (
             <div className="bg-amber-50 p-4 rounded-2xl flex items-start space-x-3">
               <AlertCircle size={20} className="text-amber-600 shrink-0" />
               <p className="text-xs text-amber-800 leading-relaxed">
-                After sending funds, enter the amount above and click confirm. Our team will verify and credit your account.
+                Withdrawals are processed within 24 hours after verification. Please ensure your wallet address is correct.
               </p>
             </div>
-          </div>
-        ) : (
-          <div className="bg-amber-50 p-4 rounded-2xl flex items-start space-x-3">
-            <AlertCircle size={20} className="text-amber-600 shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
-              Withdrawals are processed within 24 hours after verification. Please ensure your wallet address is correct.
-            </p>
-          </div>
-        )}
+          )}
 
-        <button
-          onClick={handleAction}
-          disabled={loading || !amount}
-          className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 disabled:opacity-50"
-        >
-          {loading ? 'Processing...' : `Confirm ${mode.charAt(0).toUpperCase() + mode.slice(1)}`}
-        </button>
-      </div>
+          <button
+            onClick={handleAction}
+            disabled={loading || !amount}
+            className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : `Confirm ${subTab.charAt(0).toUpperCase() + subTab.slice(1)}`}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
 
-const ReferralScreen = ({ user }: { user: User }) => {
+const ReferralScreen = ({ user, subTab, setSubTab }: { user: User, subTab: string, setSubTab: (tab: string) => void }) => {
   const [copied, setCopied] = useState(false);
   const referralLink = `${window.location.origin}/register?ref=${user.referral_code}`;
+
+  const tabs = [
+    { id: 'invite', label: 'Invite' },
+    { id: 'stats', label: 'Stats' },
+  ];
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(user.referral_code);
@@ -685,46 +762,52 @@ const ReferralScreen = ({ user }: { user: User }) => {
   return (
     <div className="px-6 pb-24 space-y-6">
       <div className="pt-2">
-        <h2 className="text-2xl font-bold text-gray-900">Invite Friends</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Referral Program</h2>
         <p className="text-sm text-gray-500">Earn bonuses for every friend you invite.</p>
       </div>
 
-      <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
-        <div className="relative z-10 text-center">
-          <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users size={40} />
-          </div>
-          <h3 className="text-2xl font-bold mb-2">Refer & Earn</h3>
-          <p className="text-indigo-100 text-sm mb-6">Get 5% of your friend's first investment as a bonus.</p>
-          
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex items-center justify-between border border-white/20">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200 text-left">Your Code</p>
-              <p className="text-xl font-mono font-bold tracking-widest">{user.referral_code}</p>
-            </div>
-            <button 
-              onClick={copyToClipboard}
-              className="bg-white text-indigo-600 p-3 rounded-xl shadow-lg hover:scale-105 transition-transform"
-            >
-              {copied ? <CheckCircle2 size={20} /> : <Copy size={20} />}
-            </button>
-          </div>
-        </div>
-      </div>
+      <SubNav tabs={tabs} activeTab={subTab} setActiveTab={setSubTab} />
 
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-        <h4 className="font-bold text-gray-900 mb-4">Referral Stats</h4>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-gray-50 rounded-2xl">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Invited</p>
-            <p className="text-2xl font-bold text-gray-900">{user.referrals}</p>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-2xl">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Bonus</p>
-            <p className="text-2xl font-bold text-emerald-600">$0.00</p>
+      {subTab === 'invite' && (
+        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
+          <div className="relative z-10 text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users size={40} />
+            </div>
+            <h3 className="text-2xl font-bold mb-2">Refer & Earn</h3>
+            <p className="text-indigo-100 text-sm mb-6">Get 5% of your friend's first investment as a bonus.</p>
+            
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex items-center justify-between border border-white/20">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200 text-left">Your Code</p>
+                <p className="text-xl font-mono font-bold tracking-widest">{user.referral_code}</p>
+              </div>
+              <button 
+                onClick={copyToClipboard}
+                className="bg-white text-indigo-600 p-3 rounded-xl shadow-lg hover:scale-105 transition-transform"
+              >
+                {copied ? <CheckCircle2 size={20} /> : <Copy size={20} />}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {subTab === 'stats' && (
+        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+          <h4 className="font-bold text-gray-900 mb-4">Referral Stats</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-gray-50 rounded-2xl">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Invited</p>
+              <p className="text-2xl font-bold text-gray-900">{user.referrals}</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-2xl">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Bonus</p>
+              <p className="text-2xl font-bold text-emerald-600">$0.00</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -987,6 +1070,7 @@ const AdminDashboard = () => {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [subTab, setSubTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<InvestmentPlan[]>([]);
   const [settings, setSettings] = useState<any>({});
@@ -1000,6 +1084,14 @@ export default function App() {
     }
     fetchGlobalData();
   }, []);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // Set default sub-tabs
+    if (tab === 'dashboard') setSubTab('overview');
+    if (tab === 'wallet') setSubTab('deposit');
+    if (tab === 'referral') setSubTab('invite');
+  };
 
   const fetchGlobalData = async () => {
     try {
@@ -1077,17 +1169,17 @@ export default function App() {
             exit={{ opacity: 0, x: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === 'dashboard' && <DashboardScreen user={user} refreshUser={() => fetchUserData(user.id)} setActiveTab={setActiveTab} />}
+            {activeTab === 'dashboard' && <DashboardScreen user={user} refreshUser={() => fetchUserData(user.id)} setActiveTab={handleTabChange} subTab={subTab} setSubTab={setSubTab} />}
             {activeTab === 'plans' && <PlansScreen user={user} refreshUser={() => fetchUserData(user.id)} plans={plans} />}
-            {activeTab === 'wallet' && <WalletScreen user={user} refreshUser={() => fetchUserData(user.id)} settings={settings} />}
-            {activeTab === 'referral' && <ReferralScreen user={user} />}
+            {activeTab === 'wallet' && <WalletScreen user={user} refreshUser={() => fetchUserData(user.id)} settings={settings} subTab={subTab} setSubTab={setSubTab} />}
+            {activeTab === 'referral' && <ReferralScreen user={user} subTab={subTab} setSubTab={setSubTab} />}
             {activeTab === 'support' && <SupportScreen />}
             {activeTab === 'admin' && user.is_admin === 1 && <AdminDashboard />}
           </motion.div>
         </AnimatePresence>
       </main>
 
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={user.is_admin === 1} />
+      <BottomNav activeTab={activeTab} setActiveTab={handleTabChange} isAdmin={user.is_admin === 1} />
     </div>
   );
 }
