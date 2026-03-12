@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
@@ -16,11 +16,46 @@ import {
   Copy,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  User as UserIcon,
+  Settings as SettingsIcon,
+  HelpCircle,
+  Filter
 } from 'lucide-react';
 import { User, Transaction, InvestmentPlan, ActivePlan } from './types';
 import { auth } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { cn } from './utils';
+
+// --- Toast System ---
+
+const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 'error' | 'info', onClose: () => void }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 50, scale: 0.9 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, y: 20, scale: 0.9 }}
+    className={cn(
+      "fixed bottom-24 left-6 right-6 z-[100] p-4 rounded-2xl shadow-2xl flex items-center space-x-3 border",
+      type === 'success' ? "bg-emerald-600 text-white border-emerald-500" :
+      type === 'error' ? "bg-red-600 text-white border-red-500" :
+      "bg-indigo-600 text-white border-indigo-500"
+    )}
+  >
+    {type === 'success' ? <CheckCircle2 size={20} /> : 
+     type === 'error' ? <AlertCircle size={20} /> : <Bell size={20} />}
+    <p className="text-sm font-bold flex-1">{message}</p>
+    <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+      <Plus size={18} className="rotate-45" />
+    </button>
+  </motion.div>
+);
+
+// --- Skeleton Components ---
+
+const Skeleton = ({ className }: { className?: string }) => (
+  <div className={cn("animate-pulse bg-gray-200 rounded-xl", className)} />
+);
 
 // --- Components ---
 
@@ -231,10 +266,17 @@ const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
 };
 
 const DashboardScreen = ({ user, refreshUser, setActiveTab, subTab, setSubTab }: { user: User, refreshUser: () => void, setActiveTab: (tab: string) => void, subTab: string, setSubTab: (tab: string) => void }) => {
+  const [filter, setFilter] = useState<'all' | 'deposit' | 'withdrawal' | 'profit'>('all');
+  
   const totalInvested = user.activePlans.reduce((sum, plan) => sum + plan.amount, 0);
   const totalProfit = user.transactions
     .filter(tx => tx.type === 'profit')
     .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const filteredTransactions = useMemo(() => {
+    if (filter === 'all') return user.transactions;
+    return user.transactions.filter(tx => tx.type === filter);
+  }, [user.transactions, filter]);
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -375,22 +417,38 @@ const DashboardScreen = ({ user, refreshUser, setActiveTab, subTab, setSubTab }:
 
       {subTab === 'activity' && (
         <div className="space-y-4">
-          <h4 className="font-bold text-gray-900">Recent Activity</h4>
+          <div className="flex justify-between items-center">
+            <h4 className="font-bold text-gray-900">Activity History</h4>
+            <div className="flex items-center space-x-2">
+              <Filter size={14} className="text-gray-400" />
+              <select 
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as any)}
+                className="text-xs font-bold text-gray-600 bg-transparent outline-none cursor-pointer"
+              >
+                <option value="all">All</option>
+                <option value="deposit">Deposits</option>
+                <option value="withdrawal">Withdrawals</option>
+                <option value="profit">Profits</option>
+              </select>
+            </div>
+          </div>
           <div className="space-y-3">
-            {user.transactions.length === 0 ? (
+            {filteredTransactions.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200">
-                <p className="text-gray-400 text-sm">No transactions yet</p>
+                <p className="text-gray-400 text-sm">No transactions found</p>
               </div>
             ) : (
-              user.transactions.map((tx) => (
+              filteredTransactions.map((tx) => (
                 <div key={tx.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center",
                       tx.type === 'deposit' ? 'bg-emerald-50 text-emerald-600' : 
                       tx.type === 'withdrawal' ? 'bg-red-50 text-red-600' : 
                       tx.type === 'profit' ? 'bg-indigo-50 text-indigo-600' :
                       'bg-blue-50 text-blue-600'
-                    }`}>
+                    )}>
                       {tx.type === 'deposit' ? <ArrowDownLeft size={20} /> : 
                        tx.type === 'withdrawal' ? <ArrowUpRight size={20} /> : 
                        tx.type === 'profit' ? <TrendingUp size={20} /> :
@@ -402,15 +460,17 @@ const DashboardScreen = ({ user, refreshUser, setActiveTab, subTab, setSubTab }:
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`font-bold text-sm ${
+                    <p className={cn(
+                      "font-bold text-sm",
                       tx.type === 'deposit' || tx.type === 'profit' ? 'text-emerald-600' : 'text-gray-900'
-                    }`}>
+                    )}>
                       {tx.type === 'deposit' || tx.type === 'profit' ? '+' : '-'}${tx.amount.toFixed(2)}
                     </p>
-                    <p className={`text-[10px] font-bold uppercase tracking-tighter ${
+                    <p className={cn(
+                      "text-[10px] font-bold uppercase tracking-tighter",
                       tx.status === 'completed' ? 'text-emerald-500' : 
                       tx.status === 'pending' ? 'text-amber-500' : 'text-red-500'
-                    }`}>
+                    )}>
                       {tx.status}
                     </p>
                   </div>
@@ -812,53 +872,86 @@ const ReferralScreen = ({ user, subTab, setSubTab }: { user: User, subTab: strin
   );
 };
 
-const SupportScreen = () => {
+const SupportScreen = ({ user, onLogout, subTab, setSubTab }: { user: User, onLogout: () => void, subTab: string, setSubTab: (tab: string) => void }) => {
+  const tabs = [
+    { id: 'support', label: 'Support' },
+    { id: 'profile', label: 'Profile' },
+  ];
+
   return (
     <div className="px-6 pb-24 space-y-6">
       <div className="pt-2">
-        <h2 className="text-2xl font-bold text-gray-900">Support Center</h2>
-        <p className="text-sm text-gray-500">We're here to help you 24/7.</p>
+        <h2 className="text-2xl font-bold text-gray-900">Account & Support</h2>
+        <p className="text-sm text-gray-500">Manage your profile and get help.</p>
       </div>
 
-      <div className="space-y-4">
-        <button className="w-full bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-              <MessageSquare size={24} />
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-gray-900">Live Chat</p>
-              <p className="text-xs text-gray-400">Average wait: 2 mins</p>
-            </div>
-          </div>
-          <ChevronRight size={20} className="text-gray-300" />
-        </button>
+      <SubNav tabs={tabs} activeTab={subTab} setActiveTab={setSubTab} />
 
-        <button className="w-full bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <Info size={24} />
+      {subTab === 'support' && (
+        <div className="space-y-4">
+          <button className="w-full bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                <MessageSquare size={24} />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-gray-900">Live Chat</p>
+                <p className="text-xs text-gray-400">Average wait: 2 mins</p>
+              </div>
             </div>
-            <div className="text-left">
-              <p className="font-bold text-gray-900">Help Center</p>
-              <p className="text-xs text-gray-400">Read FAQs and guides</p>
-            </div>
-          </div>
-          <ChevronRight size={20} className="text-gray-300" />
-        </button>
+            <ChevronRight size={20} className="text-gray-300 group-hover:text-indigo-600 transition-colors" />
+          </button>
 
-        <div className="bg-gray-900 rounded-3xl p-8 text-white text-center">
-          <h4 className="font-bold text-lg mb-2">About Vanguard</h4>
-          <p className="text-gray-400 text-xs leading-relaxed mb-6">
-            Vanguard Invest is a leading professional investment platform providing secure and high-yield opportunities for global investors. Our mission is to democratize wealth management through technology.
-          </p>
-          <div className="flex justify-center space-x-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-            <span className="hover:text-white cursor-pointer">Terms</span>
-            <span className="hover:text-white cursor-pointer">Privacy</span>
-            <span className="hover:text-white cursor-pointer">Security</span>
+          <button className="w-full bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <HelpCircle size={24} />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-gray-900">FAQs</p>
+                <p className="text-xs text-gray-400">Common questions answered</p>
+              </div>
+            </div>
+            <ChevronRight size={20} className="text-gray-300 group-hover:text-emerald-600 transition-colors" />
+          </button>
+        </div>
+      )}
+
+      {subTab === 'profile' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm text-center">
+            <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-600">
+              <UserIcon size={48} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">{user.email}</h3>
+            <p className="text-sm text-gray-400">Member since {new Date().getFullYear()}</p>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-gray-50 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <SettingsIcon size={18} className="text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">Account Settings</span>
+              </div>
+              <ChevronRight size={16} className="text-gray-300" />
+            </div>
+            <div className="p-4 border-b border-gray-50 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Shield size={18} className="text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">Security & 2FA</span>
+              </div>
+              <ChevronRight size={16} className="text-gray-300" />
+            </div>
+            <button 
+              onClick={onLogout}
+              className="w-full p-4 flex items-center space-x-3 text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <LogOut size={18} />
+              <span className="text-sm font-bold">Sign Out</span>
+            </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -1074,6 +1167,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<InvestmentPlan[]>([]);
   const [settings, setSettings] = useState<any>({});
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('vanguard_user');
@@ -1085,12 +1179,18 @@ export default function App() {
     fetchGlobalData();
   }, []);
 
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     // Set default sub-tabs
     if (tab === 'dashboard') setSubTab('overview');
     if (tab === 'wallet') setSubTab('deposit');
     if (tab === 'referral') setSubTab('invite');
+    if (tab === 'support') setSubTab('support');
   };
 
   const fetchGlobalData = async () => {
@@ -1173,13 +1273,23 @@ export default function App() {
             {activeTab === 'plans' && <PlansScreen user={user} refreshUser={() => fetchUserData(user.id)} plans={plans} />}
             {activeTab === 'wallet' && <WalletScreen user={user} refreshUser={() => fetchUserData(user.id)} settings={settings} subTab={subTab} setSubTab={setSubTab} />}
             {activeTab === 'referral' && <ReferralScreen user={user} subTab={subTab} setSubTab={setSubTab} />}
-            {activeTab === 'support' && <SupportScreen />}
+            {activeTab === 'support' && <SupportScreen user={user} onLogout={handleLogout} subTab={subTab} setSubTab={setSubTab} />}
             {activeTab === 'admin' && user.is_admin === 1 && <AdminDashboard />}
           </motion.div>
         </AnimatePresence>
       </main>
 
       <BottomNav activeTab={activeTab} setActiveTab={handleTabChange} isAdmin={user.is_admin === 1} />
+
+      <AnimatePresence>
+        {toast && (
+          <Toast 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToast(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
