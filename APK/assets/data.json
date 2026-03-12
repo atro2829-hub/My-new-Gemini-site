@@ -1,0 +1,35 @@
+{
+  "id": "user_123",
+  "email": "investor@example.com",
+  "balance": 12500.50,
+  "referral_code": "VANGUARD77",
+  "referrals": 5,
+  "is_admin": false,
+  "activePlans": [
+    {
+      "id": "plan_1",
+      "plan_name": "Pro Growth",
+      "amount": 5000.00,
+      "profit_rate": 15.0,
+      "duration_days": 30,
+      "start_date": "2026-03-01",
+      "end_date": "2026-03-31"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx_1",
+      "type": "deposit",
+      "amount": 5000.00,
+      "status": "completed",
+      "timestamp": "2026-03-01T10:00:00Z"
+    },
+    {
+      "id": "tx_2",
+      "type": "profit",
+      "amount": 250.00,
+      "status": "completed",
+      "timestamp": "2026-03-10T12:00:00Z"
+    }
+  ]
+}

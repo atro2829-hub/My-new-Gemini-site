@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vanguard Invest</string>
+    <string name="total_balance">TOTAL BALANCE</string>
+    <string name="invested">INVESTED</string>
+    <string name="total_profit">TOTAL PROFIT</string>
+    <string name="deposit">Deposit</string>
+    <string name="withdraw">Withdraw</string>
+    <string name="referral_code">Referral Code</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">#4F46E5</item>
+        <item name="colorPrimaryDark">#4338CA</item>
+        <item name="colorAccent">#4F46E5</item>
+    </style>
+
+    <style name="DashboardCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:padding">24dp</item>
+        <item name="android:background">@drawable/card_white</item>
+    </style>
+</resources>

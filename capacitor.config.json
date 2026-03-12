@@ -1,0 +1,6 @@
+{
+  "appId": "com.vanguard.invest",
+  "appName": "Vanguard Invest",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
